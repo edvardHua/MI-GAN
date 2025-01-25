@@ -353,17 +353,29 @@ class Synthesis(nn.Module):
 
 
 class Generator(nn.Module):
-    def __init__(self, resolution=256):
+    def __init__(self, resolution=256, export=False):
         super().__init__()
 
         self.synthesis = Synthesis(resolution=resolution)
         self.encoder = Encoder(resolution=resolution)
+        self.export = export
 
     def forward(self, x):
         """
         Args:
             x: 4 channel rgb+mask
         """
-        x, feats = self.encoder(x)
-        img = self.synthesis(x, feats)
+        _, feats = self.encoder(x)
+        img = self.synthesis(_, feats)
+        if self.export:
+
+            img = (img * 0.5 + 0.5) * 255.
+
+            mask, ori_img = x[:, 0:1, :, :], x[:, 1:4, :, :]
+
+            mask = mask + 0.5
+            ori_img = (ori_img + 1.0) * 127.5
+
+            comp = ori_img * mask + (1.0 - mask) * img[:3]
+            return comp
         return img
